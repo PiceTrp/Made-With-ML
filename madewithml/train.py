@@ -29,6 +29,13 @@ from madewithml import data, utils
 from madewithml.config import EFS_DIR, MLFLOW_TRACKING_URI, logger
 from madewithml.models import FinetunedLLM
 
+
+# need this to able to load HF model online
+from madewithml.utils import backend_factory
+from huggingface_hub import configure_http_backend
+
+configure_http_backend(backend_factory=backend_factory)
+
 # Initialize Typer CLI app
 app = typer.Typer()
 

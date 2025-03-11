@@ -109,3 +109,4 @@ airflow/airflow.db
 
 # Clean up
 .trash/
+notebooks/my_openai_api_key.txt

@@ -7,6 +7,11 @@ import torch.nn as nn
 import torch.nn.functional as F
 from transformers import BertModel
 
+# need this to able to load HF model online
+from madewithml.utils import backend_factory
+from huggingface_hub import configure_http_backend
+configure_http_backend(backend_factory=backend_factory)
+
 
 class FinetunedLLM(nn.Module):
     def __init__(self, llm, dropout_p, embedding_dim, num_classes):
@@ -53,7 +58,7 @@ class FinetunedLLM(nn.Module):
     def load(cls, args_fp, state_dict_fp):
         with open(args_fp, "r") as fp:
             kwargs = json.load(fp=fp)
-        llm = BertModel.from_pretrained("allenai/scibert_scivocab_uncased", return_dict=False)
+        llm = BertModel.from_pretrained("allenai/scibert_scivocab_uncased", return_dict=False, force_download=True)
         model = cls(llm=llm, **kwargs)
         model.load_state_dict(torch.load(state_dict_fp, map_location=torch.device("cpu")))
         return model

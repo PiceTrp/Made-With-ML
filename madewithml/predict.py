@@ -16,6 +16,12 @@ from madewithml.data import CustomPreprocessor
 from madewithml.models import FinetunedLLM
 from madewithml.utils import collate_fn
 
+# need this to able to load HF model online
+from madewithml.utils import backend_factory
+from huggingface_hub import configure_http_backend
+
+configure_http_backend(backend_factory=backend_factory)
+
 # Initialize Typer CLI app
 app = typer.Typer()
 
@@ -128,7 +134,15 @@ def get_best_checkpoint(run_id: str) -> TorchCheckpoint:  # pragma: no cover, ml
     Returns:
         TorchCheckpoint: Best checkpoint from the run.
     """
-    artifact_dir = urlparse(mlflow.get_run(run_id).info.artifact_uri).path  # get path from mlflow
+    # artifact_dir = urlparse(mlflow.get_run(run_id).info.artifact_uri).path  # get path from mlflow
+
+    # we change project loation, so need to manually update the location of mlflow artifact uri.
+    artifact_uri = mlflow.get_run(run_id).info.artifact_uri
+    artifact_dir = urlparse(artifact_uri).path  # Extract the path
+
+    # Replace the specific part of the path
+    artifact_dir = artifact_dir.replace("Made-With-ML/notebooks/../efs", "hands_on_projects/Made-With-ML/efs")
+
     results = Result.from_path(artifact_dir)
     return results.best_checkpoints[0][0]
 

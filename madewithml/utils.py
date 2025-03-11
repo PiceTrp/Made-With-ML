@@ -13,6 +13,15 @@ from madewithml.config import mlflow
 DatasetContext.get_current().execution_options.preserve_order = True
 
 
+import requests
+
+def backend_factory() -> requests.Session:
+    """SSL certificate problem. Run this to allow loading huggingface model online"""
+    session = requests.Session()
+    session.verify = False
+    return session
+
+
 def set_seeds(seed: int = 42):
     """Set seeds for reproducibility."""
     np.random.seed(seed)

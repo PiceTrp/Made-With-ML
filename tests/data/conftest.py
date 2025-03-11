@@ -2,6 +2,9 @@ import great_expectations as ge
 import pandas as pd
 import pytest
 
+# to run test:
+# export DATASET_LOC="https://raw.githubusercontent.com/GokuMohandas/Made-With-ML/main/datasets/dataset.csv"
+# pytest --dataset-loc=$DATASET_LOC tests/data --verbose --disable-warnings
 
 def pytest_addoption(parser):
     """Add option to specify dataset location when executing tests from CLI.

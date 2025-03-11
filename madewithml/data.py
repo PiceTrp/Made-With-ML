@@ -10,6 +10,11 @@ from transformers import BertTokenizer
 
 from madewithml.config import STOPWORDS
 
+# need this to able to load HF model online - Tokenizer in data.py
+from madewithml.utils import backend_factory
+from huggingface_hub import configure_http_backend
+configure_http_backend(backend_factory=backend_factory)
+
 
 def load_data(dataset_loc: str, num_samples: int = None) -> Dataset:
     """Load data from source into a Ray Dataset.
