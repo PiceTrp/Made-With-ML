@@ -1,46 +1,62 @@
 name: workloads
 on:
-  workflow_dispatch:  # manual
+  workflow_dispatch: # manual
   pull_request:
     branches:
-    - main
+      - main
 permissions: write-all
 
 jobs:
   workloads:
-    runs-on: ubuntu-22.04
+    runs-on: self-hosted # Your local machine
     steps:
-
-      # Configure AWS credentials
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v2
-        with:
-          role-to-assume: arn:aws:iam::593241322649:role/github-actions-madewithml
-          role-session-name: s3access
-          aws-region: us-west-2
-
       # Set up dependencies
-      - uses: actions/checkout@v3
-      - uses: actions/setup-python@v4
-        with:
-          python-version: '3.10.11'
-          cache: 'pip'
-      - run: python3 -m pip install anyscale==0.5.131 typer==0.9.0
+      - name: Checkout repository
+        uses: actions/checkout@v3
 
-      # Run workloads
-      - name: Workloads
+      # Use Conda environment instead of pip (similar to your serve.yaml)
+      - name: Activate Conda environment
         run: |
-          export ANYSCALE_HOST=${{ secrets.ANYSCALE_HOST }}
-          export ANYSCALE_CLI_TOKEN=${{ secrets.ANYSCALE_CLI_TOKEN }}
-          anyscale jobs submit deploy/jobs/workloads.yaml --wait
+          source $CONDA_HOME/etc/profile.d/conda.sh || source $(conda info --base)/etc/profile.d/conda.sh
+          conda activate mlops
+          echo "Using Conda environment:"
+          conda info
 
-      # Read results from S3
-      - name: Read results from S3
+      # Run workloads directly on your machine
+      - name: Run workloads
+        shell: bash -l {0} # Use login shell to ensure conda environment is active
         run: |
-          mkdir results
-          aws s3 cp s3://madewithml/${{ github.actor }}/results/ results/ --recursive
+          bash workload.sh
+
+      # Process results (now generated locally)
+      - name: Process results
+        run: |
+          # Check if result files exist
+          if [ ! -f "results/training_results.json" ]; then
+            echo "Error: training_results.json does not exist"
+            exit 1
+          fi
+
+          if [ ! -f "results/evaluation_results.json" ]; then
+            echo "Error: evaluation_results.json does not exist"
+            exit 1
+          fi
+
+          # Check if processing scripts exist
+          if [ ! -f ".github/workflows/json_to_md.py" ]; then
+            echo "Error: json_to_md.py does not exist"
+            exit 1
+          fi
+
+          # Process results
           python .github/workflows/json_to_md.py results/training_results.json results/training_results.md
           python .github/workflows/json_to_md.py results/evaluation_results.json results/evaluation_results.md
+
+          # Check if markdown files were created
+          if [ ! -f "results/training_results.md" ] || [ ! -f "results/evaluation_results.md" ]; then
+            echo "Error: Markdown files were not created successfully"
+            exit 1
+          fi
 
       # Comment results to PR
       - name: Comment training results on PR
