@@ -14,19 +14,27 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v3
 
-      # Use Conda environment instead of pip (similar to your serve.yaml)
-      - name: Activate Conda environment
+      # Replace your conda activation steps with this:
+      - name: Set up Conda
+        uses: conda-incubator/setup-miniconda@v2
+        with:
+          miniconda-version: "latest"
+          activate-environment: mlops
+          mamba-version: "*"
+          environment-file: environment.yml # Include this if you have an environment.yml file
+          auto-activate-base: false
+
+      # Now conda commands will work
+      - name: Verify Conda Environment
+        shell: bash -l {0}
         run: |
-          source $CONDA_HOME/etc/profile.d/conda.sh || source $(conda info --base)/etc/profile.d/conda.sh
-          conda activate mlops
-          echo "Using Conda environment:"
           conda info
 
       # Run workloads directly on your machine
       - name: Run workloads
         shell: bash -l {0} # Use login shell to ensure conda environment is active
         run: |
-          bash workload.sh
+          bash ./deploy/jobs/workloads.sh
 
       # Process results (now generated locally)
       - name: Process results

@@ -44,19 +44,21 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v3
 
-      # Use existing Conda environment
-      - name: Activate Conda environment
+      # Replace your conda activation steps with this:
+      - name: Set up Conda
+        uses: conda-incubator/setup-miniconda@v2
+        with:
+          miniconda-version: "latest"
+          activate-environment: mlops
+          mamba-version: "*"
+          environment-file: environment.yml # Include this if you have an environment.yml file
+          auto-activate-base: false
+
+      # Now conda commands will work
+      - name: Verify Conda Environment
+        shell: bash -l {0}
         run: |
-          # Source the conda.sh script
-          source $CONDA_HOME/etc/profile.d/conda.sh || source $(conda info --base)/etc/profile.d/conda.sh
-
-          # Activate your environment
-          conda activate mlops
-
-          # Print environment info
-          echo "Using Conda environment:"
           conda info
-          conda list | grep -E "ray|fastapi|starlette|mlflow"
 
       # Serve model using Ray and FastAPI
       - name: Serve model
