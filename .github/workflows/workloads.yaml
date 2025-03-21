@@ -1,0 +1,77 @@
+name: workloads
+on:
+  workflow_dispatch: # manual
+  pull_request:
+    branches:
+      - main
+permissions: write-all
+
+jobs:
+  workloads:
+    runs-on: self-hosted # Your local machine
+    steps:
+      # Set up dependencies
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      # Replace your conda activation steps with this:
+      - name: Set up Conda
+        uses: conda-incubator/setup-miniconda@v2
+        with:
+          miniconda-version: "latest"
+          activate-environment: mlops
+          mamba-version: "*"
+          environment-file: environment.yml # Include this if you have an environment.yml file
+          auto-activate-base: false
+
+      # Now conda commands will work
+      - name: Verify Conda Environment
+        shell: bash -l {0}
+        run: |
+          conda info
+
+      # Run workloads directly on your machine
+      - name: Run workloads
+        shell: bash -l {0} # Use login shell to ensure conda environment is active
+        run: |
+          bash ./deploy/jobs/workloads.sh
+
+      # Process results (now generated locally)
+      - name: Process results
+        run: |
+          # Check if result files exist
+          if [ ! -f "results/training_results.json" ]; then
+            echo "Error: training_results.json does not exist"
+            exit 1
+          fi
+
+          if [ ! -f "results/evaluation_results.json" ]; then
+            echo "Error: evaluation_results.json does not exist"
+            exit 1
+          fi
+
+          # Check if processing scripts exist
+          if [ ! -f ".github/workflows/json_to_md.py" ]; then
+            echo "Error: json_to_md.py does not exist"
+            exit 1
+          fi
+
+          # Process results
+          python .github/workflows/json_to_md.py results/training_results.json results/training_results.md
+          python .github/workflows/json_to_md.py results/evaluation_results.json results/evaluation_results.md
+
+          # Check if markdown files were created
+          if [ ! -f "results/training_results.md" ] || [ ! -f "results/evaluation_results.md" ]; then
+            echo "Error: Markdown files were not created successfully"
+            exit 1
+          fi
+
+      # Comment results to PR
+      - name: Comment training results on PR
+        uses: thollander/actions-comment-pull-request@v2
+        with:
+          filePath: results/training_results.md
+      - name: Comment evaluation results on PR
+        uses: thollander/actions-comment-pull-request@v2
+        with:
+          filePath: results/evaluation_results.md

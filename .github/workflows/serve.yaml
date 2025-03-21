@@ -1,0 +1,104 @@
+# name: serve-local
+# on:
+#   workflow_dispatch: # manual
+#   push:
+#     branches:
+#       - main
+# permissions: write-all
+
+# jobs:
+#   serve:
+#     runs-on: self-hosted
+#     steps:
+#       # Set up dependencies
+#       - name: Checkout repository
+#         uses: actions/checkout@v3
+
+#       # Set up dependencies
+#       - name: Set up Python
+#         uses: actions/setup-python@v4
+#         with:
+#           python-version: "3.10.11"
+#           cache: "pip"
+#       - run: python3 -m pip install anyscale==0.5.131 typer==0.9.0
+
+#       # Serve model
+#       - name: Serve model
+#         run: |
+#         echo "Starting local model service..."
+#         python ./deploy/services/serve_model.py
+
+name: serve-local
+on:
+  workflow_dispatch: # manual trigger
+  push:
+    branches:
+      - main
+permissions: write-all
+
+jobs:
+  serve:
+    runs-on: self-hosted
+    steps:
+      # Checkout repository
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      # Replace your conda activation steps with this:
+      - name: Set up Conda
+        uses: conda-incubator/setup-miniconda@v2
+        with:
+          miniconda-version: "latest"
+          activate-environment: mlops
+          mamba-version: "*"
+          environment-file: environment.yml # Include this if you have an environment.yml file
+          auto-activate-base: false
+
+      # Now conda commands will work
+      - name: Verify Conda Environment
+        shell: bash -l {0}
+        run: |
+          conda info
+
+      # Serve model using Ray and FastAPI
+      - name: Serve model
+        shell: bash -l {0}
+        env:
+          RAY_SERVE_HTTP_PORT: 8000
+          RAY_DASHBOARD_PORT: 8265
+          RESULTS_FILE: "results/training_results.json"
+        run: |
+          # Ensure conda env is active
+          source $CONDA_HOME/etc/profile.d/conda.sh || source $(conda info --base)/etc/profile.d/conda.sh
+          conda activate mlops
+
+          # Get the run_id
+          RUN_ID=$(python -c "import os; from madewithml import utils; d = utils.load_dict(os.getenv('RESULTS_FILE')); print(d['run_id'])")
+
+          echo "Starting Ray Serve with run_id: $RUN_ID"
+
+          # Start Ray Serve with the model
+          python ./deploy/services/serve_model.py --run_id=$RUN_ID --threshold=0.9
+
+      # Health check once the service is up
+      - name: Check service health
+        shell: bash -l {0}
+        run: |
+          # Wait for service to start
+          echo "Waiting for service to start..."
+          sleep 10
+
+          # Check if service is healthy
+          curl -s http://localhost:8000/ || echo "Service health check failed"
+
+      # Log service information
+      - name: Service information
+        run: |
+          echo "Model service is running"
+          echo "Started at: $(date)"
+          echo "API endpoint: http://localhost:8000/"
+          echo "Ray dashboard: http://localhost:8265/"
+          echo "Access the API documentation at: http://localhost:8000/docs"
+
+          # Show running processes
+          ps aux | grep "ray\|serve" | grep -v grep

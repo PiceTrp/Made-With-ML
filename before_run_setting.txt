@@ -1,0 +1,4 @@
+# Please export those params to environment variables.
+>>
+EXPERIMENT_NAME=llm-1741243372
+RUN_ID=3bac1f99376f4397a65c04de91ceed36
